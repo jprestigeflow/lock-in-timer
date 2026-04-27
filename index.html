@@ -102,7 +102,6 @@ html, body {
   stroke: var(--fire);
   stroke-width: 14;
   stroke-linecap: round;
-  stroke-dasharray: 597;
   stroke-dashoffset: 0;
   filter: drop-shadow(0 0 10px var(--fire));
   transition: stroke var(--transition), filter var(--transition), stroke-dashoffset 0.5s linear;
@@ -255,6 +254,7 @@ html, body {
   padding: 15px 36px;
   font-size: 12px;
   font-weight: 800;
+  font-family: inherit;
   color: #fff;
   letter-spacing: 2px;
   text-transform: uppercase;
@@ -272,6 +272,7 @@ html, body {
   border-radius: 50px;
   padding: 15px 20px;
   font-size: 12px;
+  font-family: inherit;
   color: var(--fire-dim);
   letter-spacing: 1px;
   cursor: pointer;
@@ -279,6 +280,14 @@ html, body {
 }
 
 .btn-stop:hover { border-color: var(--fire-dim); }
+
+#app.break .btn-stop {
+  border-color: var(--green-muted);
+  color: var(--green-dim);
+  transition: border-color 0.2s ease, color 0.6s ease;
+}
+
+#app.break .btn-stop:hover { border-color: var(--green-dim); }
 
 /* Utilities */
 .hidden { display: none !important; }
