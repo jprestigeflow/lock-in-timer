@@ -482,6 +482,150 @@ html, body {
       return `${m}m`;
     }
 
+    // ─── SOUND (Web Audio API) ────────────────────────────────
+    function playChime() {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const notes = [523.25, 659.25, 783.99]; // C5, E5, G5 — major chord
+        notes.forEach((freq, i) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.type = 'sine';
+          osc.frequency.value = freq;
+          const t = ctx.currentTime + i * 0.18;
+          gain.gain.setValueAtTime(0, t);
+          gain.gain.linearRampToValueAtTime(0.3, t + 0.05);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.9);
+          osc.start(t);
+          osc.stop(t + 0.9);
+        });
+      } catch(e) { /* silent fail */ }
+    }
+
+    // ─── NOTIFICATIONS ────────────────────────────────────────
+    async function requestNotifPermission() {
+      if (!('Notification' in window)) return;
+      if (Notification.permission === 'granted') return;
+      const result = await Notification.requestPermission();
+      state.notifPermission = result;
+      const blocked = document.getElementById('notifBlocked');
+      if (result === 'denied') {
+        blocked.classList.remove('hidden');
+      }
+    }
+
+    function sendNotification(title, body) {
+      if (!('Notification' in window)) return;
+      if (Notification.permission !== 'granted') return;
+      new Notification(title, { body, icon: '/icon-192.png', silent: false });
+    }
+
+    // ─── QUOTES ───────────────────────────────────────────────
+    const QUOTES = [
+      // LAW OF DETACHMENT
+      { text: "The law of detachment isn't giving up — it's the highest form of trust. Do the work so fully that you no longer need the outcome to validate you. Dial the number. Release the result.", category: "Law of Detachment" },
+      { text: "You want this so badly you can feel it in your chest. Good. Now put that wanting down and pick up the work. The universe responds to action, not desperation. Do the rep. Trust the process.", category: "Law of Detachment" },
+      { text: "Attachment to the outcome is the thief of your peace. You cannot control whether they say yes. You can only control whether you made the call. Make the call.", category: "Law of Detachment" },
+      { text: "The moment you stop needing the result is the moment you become unstoppable. Not because you stopped caring — but because you stopped letting fear of failure make your decisions.", category: "Law of Detachment" },
+      { text: "Every call you make is a seed planted in soil you cannot see. You don't dig up seeds to check if they're growing. You water them every single day and trust the harvest is coming.", category: "Law of Detachment" },
+      { text: "Detachment is not indifference. It is the absolute commitment to the input, with zero dependency on the output. The work is your only job. The result is the universe's.", category: "Law of Detachment" },
+      { text: "Stop calculating the odds. Stop measuring how close you are. The person who locks in without counting the score is the one who eventually stops counting because they've already won.", category: "Law of Detachment" },
+      { text: "You are not building toward a moment. You are becoming someone. Each rep, each call, each session — that's the becoming. The results are just proof of who you already decided to be.", category: "Law of Detachment" },
+      { text: "Release the how. Release the when. Keep only the what: I will make the calls. I will show up. I will do the work. Everything else is not your department.", category: "Law of Detachment" },
+      { text: "The fastest way to get what you want is to stop desperately needing it and start completely trusting that your daily inputs will deliver it. Work the process. Release the timeline.", category: "Law of Detachment" },
+      { text: "There is freedom in the rep. You don't have to know if it's working. You just have to do it. The person who keeps dialing without obsessing over the scoreboard outlasts everyone who stopped to check.", category: "Law of Detachment" },
+      { text: "Detachment is not passive. It is the most aggressive form of faith — working at full intensity while trusting completely that the effort compounds even when you can't see it.", category: "Law of Detachment" },
+      { text: "One call does not build a life. But the habit of making calls every single day — without quitting when it's hard, without needing each one to win — that is what builds everything.", category: "Law of Detachment" },
+      { text: "Your energy is for the input. Not for worrying about the output. Every calorie of anxiety you burn on results is a calorie stolen from the work. Do the work. Trust the rest.", category: "Law of Detachment" },
+      { text: "You are not chasing this. You are becoming the person it is chasing. The work you put in right now — every session, every call — is the becoming. Stop chasing. Start becoming.", category: "Law of Detachment" },
+      { text: "The harvest never arrives on the same day as the planting. Do not stand in the field looking for fruit you planted an hour ago. Lock in. Water the seeds. Trust the season.", category: "Law of Detachment" },
+      { text: "The outcome is none of your business. Your only business is this: did you show up fully? Did you make the call? Did you lock in? Everything else is out of your jurisdiction.", category: "Law of Detachment" },
+      { text: "Faith is not believing something will happen. Faith is continuing to work as if it already has — every single day, especially the ones that feel like nothing is moving.", category: "Law of Detachment" },
+      { text: "What would it look like to stop white-knuckling the result and just do the work with open hands? That is detachment. That is freedom. That is the session you are in right now.", category: "Law of Detachment" },
+      { text: "The person who needs the yes to keep going will eventually stop. The person who calls regardless of the answer will eventually get everything. Be the second person.", category: "Law of Detachment" },
+
+      // LAW OF ATTRACTION
+      { text: "You do not attract what you want. You attract what you are. Who you are right now — in this session, on this call, with this effort — that is what is coming back to you.", category: "Law of Attraction" },
+      { text: "The life you want already exists. The version of you making those calls without hesitation, without fear, with full belief — that is the signal. This session is you tuning in.", category: "Law of Attraction" },
+      { text: "Every thought you hold about what you're building, every call you make as if it's already working — that is not wishful thinking. That is the exact frequency that draws it to you.", category: "Law of Attraction" },
+      { text: "Act as if. Not because you're faking it — but because the person who already has what you want acts exactly like someone who does the work every single day without needing permission.", category: "Law of Attraction" },
+      { text: "What you focus on expands. Focus on the excuse and it grows. Focus on the call, the session, the work — and that grows. Your attention is the most powerful thing you own right now.", category: "Law of Attraction" },
+      { text: "The universe doesn't respond to what you say you want. It responds to the energy of your actions. Thirty minutes of pure focus says more than any vision board ever could.", category: "Law of Attraction" },
+      { text: "Abundance is attracted by someone who behaves abundantly — who shows up, does the work, and believes in the outcome before the outcome has any reason to exist yet.", category: "Law of Attraction" },
+      { text: "You are not behind. You are not too late. You are exactly where you need to be — and from here, the only move is to become the version of yourself that doesn't flinch when it's time to dial.", category: "Law of Attraction" },
+      { text: "The version of your life you dream about at night is attracted to the version of you who works without distraction. Be that person for thirty minutes. Then again. Then again.", category: "Law of Attraction" },
+      { text: "Belief is not a feeling. It's a decision that shows up in your behavior. You decide to believe by picking up the phone. By opening the laptop. By starting the session instead of scrolling.", category: "Law of Attraction" },
+      { text: "You cannot think your way into a different life. But you can think like the person who already lives it — and then move like them, work like them, lock in like them — until you are them.", category: "Law of Attraction" },
+      { text: "The energy you carry into this session is the invitation you send to the universe. Bring intensity. Bring intention. Bring the unshakeable belief that this work is building something real.", category: "Law of Attraction" },
+      { text: "Success leaves a signal. That signal is not luck or timing — it's the frequency of someone who shows up every single day and does the uncomfortable thing without waiting to feel ready.", category: "Law of Attraction" },
+      { text: "What you consistently do becomes what you consistently attract. Consistent calls attract consistent clients. Consistent work attracts consistent results. This session is not small.", category: "Law of Attraction" },
+      { text: "Your dominant thought is your order to the universe. Right now — for the next thirty minutes — let your dominant thought be: I am someone who locks in, does the work, and does not quit.", category: "Law of Attraction" },
+      { text: "You have been given the desire and the capacity. The desire is the signal that it is possible for you. The capacity is built in sessions exactly like this one. Trust both.", category: "Law of Attraction" },
+      { text: "You cannot want a harvest and refuse to plant. You cannot want a client and refuse to dial. The wanting and the doing must be the same frequency. Make them match — right now.", category: "Law of Attraction" },
+      { text: "The version of you that already has everything you want made a decision at some point that this — this exact kind of session, this level of discipline — was not optional. Decide that now.", category: "Law of Attraction" },
+      { text: "Gratitude is the fastest way to raise your frequency. You have a phone. You have a skill. You have 30 minutes. You have a goal worth building. That is everything you need.", category: "Law of Attraction" },
+      { text: "What you appreciate, appreciates. Appreciate the grind. Appreciate the hard call. Appreciate the uncomfortable session. These are not obstacles — they are the exact ingredients the life is made of.", category: "Law of Attraction" },
+
+      // STOIC
+      { text: "You have power over your mind, not outside events. The call might go nowhere. The session might feel hard. That is not your problem. Your only problem is whether you showed up.", category: "Stoic" },
+      { text: "Waste no more time arguing about what a good person should be. Be one. The good builder shows up. The good closer dials. The good person does the work — especially when no one is watching.", category: "Stoic" },
+      { text: "Never let the future disturb you. The result of the next call is not yours to own. The quality of your effort on the next call — that belongs entirely to you.", category: "Stoic" },
+      { text: "It is not death that a man should fear, but he should fear never beginning to live. The distraction is the death of the life you're building. Lock in. Begin.", category: "Stoic" },
+      { text: "The impediment to action advances action. What stands in the way becomes the way. The hard call, the quiet morning, the doubt — these are not obstacles. They are the path.", category: "Stoic" },
+      { text: "Confine yourself to the present. The last call doesn't matter. The next call hasn't happened. This moment, this session, this effort — that is all that is real and all that is yours.", category: "Stoic" },
+      { text: "How long are you going to wait before you demand the best for yourself? You already know what needs to be done. The discipline is not in knowing — it's in the thirty minutes you're in right now.", category: "Stoic" },
+      { text: "First say to yourself what you would be, then do what you have to do. You said you wanted the life. Now do what that life requires. The calls. The sessions. The reps. Every day.", category: "Stoic" },
+      { text: "Very little is needed to make a happy life — it is all within yourself, in your way of thinking. Stop waiting for the breakthrough call. Find meaning in making the call. That is the discipline.", category: "Stoic" },
+      { text: "Endure the present and you will find the future. This session is not comfortable. The discomfort is not a sign that something is wrong. It is proof that you are doing something real.", category: "Stoic" },
+      { text: "A gem cannot be polished without friction, nor a man perfected without trials. The calls that go nowhere are not failures. They are the friction that makes you someone who eventually closes everything.", category: "Stoic" },
+      { text: "Do not indulge in expectations of what isn't in your control. Make the call you can make. Show up for the session you can show up for. That is the entire scope of your responsibility.", category: "Stoic" },
+      { text: "The sun also rises on those who did not earn it. But the life you want rises only on those who worked for it when they didn't feel like it. That is what separates. This session is that separation.", category: "Stoic" },
+      { text: "Think of yourself as dead. You have lived your life. Now take what's left and live it properly. The procrastination ends when you truly feel the weight of the time that does not return.", category: "Stoic" },
+      { text: "Luck is what happens when preparation meets opportunity. You are in preparation right now. Every session is preparation. The opportunity will come — and you will be someone who was ready.", category: "Stoic" },
+      { text: "If it is not right, do not do it. If it is not true, do not say it. And if the work is what builds the life — then do the work. Not tomorrow. Not after one more scroll. Now.", category: "Stoic" },
+      { text: "The best revenge is to be unlike those who caused the injury. The best answer to doubt — yours or anyone else's — is to lock in and build something they cannot argue with.", category: "Stoic" },
+      { text: "He who is brave is free. The scroll is safe. The call is brave. The session is brave. Every time you choose the work over the comfort, you are exercising the only freedom that matters.", category: "Stoic" },
+      { text: "You have survived every hard day you have ever had. Your track record of getting through difficult sessions is 100%. Remember that when this one feels hard.", category: "Stoic" },
+      { text: "The whole future lies in uncertainty. Live immediately. Not tomorrow when it feels better. Not after one more scroll. The only session that counts is the one happening right now.", category: "Stoic" },
+      { text: "It is not that I am so smart. It is just that I stay with problems longer. Stay with the session. Stay with the calls. The ones who outlast the discomfort are the ones who build everything.", category: "Stoic" },
+      { text: "Difficulties strengthen the mind as labour does the body. The call that feels impossible to make is the exact call that makes you into someone who can close anything.", category: "Stoic" },
+      { text: "Remember that you are an actor in a play. Your job is not to choose the length — it is to play your part well. Your part right now is to lock in. Play it with everything you have.", category: "Stoic" },
+      { text: "What we do now echoes in eternity. This session echoes. This call echoes. The pattern of showing up when it's hard — that is what compounds into a life you can look back on and respect.", category: "Stoic" },
+      { text: "Seek not that the things which happen should happen as you wish; but wish the things which happen to be as they are, and you will have a tranquil flow of life. Work the process. Release the outcome.", category: "Stoic" },
+    ];
+
+    let quoteQueue = [];
+    let currentQuoteIdx = 0;
+
+    function shuffleQuotes() {
+      quoteQueue = [...QUOTES];
+      for (let i = quoteQueue.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [quoteQueue[i], quoteQueue[j]] = [quoteQueue[j], quoteQueue[i]];
+      }
+      currentQuoteIdx = 0;
+    }
+
+    function showNextQuote() {
+      if (quoteQueue.length === 0 || currentQuoteIdx >= quoteQueue.length) shuffleQuotes();
+      const q = quoteQueue[currentQuoteIdx++];
+      const textEl = document.getElementById('quoteText');
+      const catEl  = document.getElementById('quoteCategory');
+      textEl.classList.remove('visible');
+      setTimeout(() => {
+        textEl.textContent = `"${q.text}"`;
+        catEl.textContent  = q.category;
+        textEl.classList.add('visible');
+      }, 400);
+    }
+
+    function startQuoteRotation() {
+      clearInterval(state.quoteInterval);
+      state.quoteInterval = setInterval(showNextQuote, QUOTE_INTERVAL_MS);
+    }
+
     // ─── RENDER ───────────────────────────────────────────────
     const RING_CIRCUMFERENCE = 2 * Math.PI * 95; // r=95 → ~597
 
