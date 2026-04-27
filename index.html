@@ -11,11 +11,349 @@
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>Lock In Timer</title>
   <style>
-    /* CSS goes here */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --fire: #ff4500;
+  --fire-bright: #ff6b00;
+  --fire-glow: #ff450044;
+  --fire-dim: #ff450077;
+  --fire-muted: #ff450033;
+  --green: #7fff00;
+  --green-glow: #7fff0044;
+  --green-dim: #7fff0077;
+  --green-muted: #7fff0033;
+  --bg: #0f0f0f;
+  --bg-warm: #1a0800;
+  --bg-cool: #0d1a00;
+  --text: #ffffff;
+  --transition: 0.6s ease;
+}
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+  color: var(--text);
+  overflow: hidden;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 28px 24px 32px;
+  gap: 18px;
+  background: linear-gradient(160deg, var(--bg), var(--bg-warm));
+  transition: background var(--transition);
+}
+
+#app.break {
+  background: linear-gradient(160deg, var(--bg), var(--bg-cool));
+}
+
+/* Header */
+.header { text-align: center; }
+
+.mode-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: var(--fire);
+  transition: color var(--transition);
+}
+
+#app.break .mode-label { color: var(--green); }
+
+.session-info {
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: var(--fire-dim);
+  margin-top: 4px;
+  transition: color var(--transition);
+}
+
+#app.break .session-info { color: var(--green-dim); }
+
+/* Ring */
+.ring-wrap {
+  position: relative;
+  width: 220px;
+  height: 220px;
+}
+
+.ring-wrap svg { transform: rotate(-90deg); }
+
+.ring-bg {
+  fill: none;
+  stroke: var(--bg-warm);
+  stroke-width: 14;
+  transition: stroke var(--transition);
+}
+
+#app.break .ring-bg { stroke: var(--bg-cool); }
+
+.ring-progress {
+  fill: none;
+  stroke: var(--fire);
+  stroke-width: 14;
+  stroke-linecap: round;
+  stroke-dasharray: 597;
+  stroke-dashoffset: 0;
+  filter: drop-shadow(0 0 10px var(--fire));
+  transition: stroke var(--transition), filter var(--transition), stroke-dashoffset 0.5s linear;
+}
+
+#app.break .ring-progress {
+  stroke: var(--green);
+  filter: drop-shadow(0 0 10px var(--green));
+}
+
+.ring-center {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+
+.countdown {
+  font-size: 48px;
+  font-weight: 800;
+  color: var(--fire-bright);
+  text-shadow: 0 0 30px var(--fire-glow);
+  letter-spacing: -2px;
+  line-height: 1;
+  transition: color var(--transition), text-shadow var(--transition);
+}
+
+#app.break .countdown {
+  color: var(--green);
+  text-shadow: 0 0 30px var(--green-glow);
+}
+
+.ring-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: var(--fire-dim);
+  margin-top: 6px;
+  transition: color var(--transition);
+}
+
+#app.break .ring-label { color: var(--green-dim); }
+
+/* Quote */
+.quote-box {
+  text-align: center;
+  max-width: 340px;
+  min-height: 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  justify-content: center;
+}
+
+.quote-text {
+  font-size: 12px;
+  line-height: 1.7;
+  color: #cccccc;
+  font-style: italic;
+  opacity: 0;
+  transition: opacity 0.8s ease;
+}
+
+.quote-text.visible { opacity: 1; }
+
+.quote-category {
+  font-size: 9px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--fire-dim);
+  transition: color var(--transition);
+}
+
+#app.break .quote-category { color: var(--green-dim); }
+
+/* Break tasks */
+.break-tasks {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  max-width: 300px;
+}
+
+.break-task {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--green-dim);
+  letter-spacing: 1px;
+  font-weight: 500;
+}
+
+.break-task span { font-size: 16px; }
+
+/* Divider */
+.divider {
+  width: 100%;
+  max-width: 300px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--fire-muted), transparent);
+  transition: background var(--transition);
+}
+
+#app.break .divider {
+  background: linear-gradient(90deg, transparent, var(--green-muted), transparent);
+}
+
+/* Stats */
+.stats-row {
+  display: flex;
+  gap: 32px;
+  justify-content: center;
+}
+
+.stat { text-align: center; }
+
+.stat-num {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--fire-bright);
+  transition: color var(--transition);
+}
+
+#app.break .stat-num { color: var(--green); }
+
+.stat-label {
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--fire-dim);
+  margin-top: 2px;
+  transition: color var(--transition);
+}
+
+#app.break .stat-label { color: var(--green-dim); }
+
+/* Buttons */
+.btn-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.btn-start {
+  background: linear-gradient(135deg, #ff4500, #ff8c00);
+  border: none;
+  border-radius: 50px;
+  padding: 15px 36px;
+  font-size: 12px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 0 0 24px var(--fire-glow);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.btn-start:active { transform: scale(0.97); }
+.btn-start:disabled { opacity: 0.5; cursor: default; pointer-events: none; }
+
+.btn-stop {
+  background: transparent;
+  border: 1px solid var(--fire-muted);
+  border-radius: 50px;
+  padding: 15px 20px;
+  font-size: 12px;
+  color: var(--fire-dim);
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+}
+
+.btn-stop:hover { border-color: var(--fire-dim); }
+
+/* Utilities */
+.hidden { display: none !important; }
+
+.notif-blocked {
+  font-size: 10px;
+  color: #555;
+  letter-spacing: 1px;
+}
   </style>
 </head>
 <body>
-  <div id="app">Loading...</div>
+  <div id="app">
+  <!-- Header -->
+  <div class="header">
+    <div id="modeLabel" class="mode-label">🔥 Lock In</div>
+    <div id="sessionInfo" class="session-info">SESSION 0 · TODAY</div>
+  </div>
+
+  <!-- Ring -->
+  <div class="ring-wrap">
+    <svg id="ringSvg" viewBox="0 0 220 220" width="220" height="220">
+      <circle class="ring-bg" cx="110" cy="110" r="95"/>
+      <circle id="ringProgress" class="ring-progress" cx="110" cy="110" r="95"/>
+    </svg>
+    <div class="ring-center">
+      <div id="countdown" class="countdown">30:00</div>
+      <div id="ringLabel" class="ring-label">READY</div>
+    </div>
+  </div>
+
+  <!-- Quote -->
+  <div id="quoteBox" class="quote-box">
+    <div id="quoteText" class="quote-text"></div>
+    <div id="quoteCategory" class="quote-category"></div>
+  </div>
+
+  <!-- Break tasks (hidden during lock-in) -->
+  <div id="breakTasks" class="break-tasks hidden">
+    <div class="break-task"><span>💪</span> 10 Push Ups — Go Now</div>
+    <div class="break-task"><span>🚶</span> Step Away. Reset Your Mind.</div>
+    <div class="break-task"><span>💧</span> Drink Water</div>
+  </div>
+
+  <!-- Divider -->
+  <div class="divider"></div>
+
+  <!-- Stats -->
+  <div class="stats-row">
+    <div class="stat">
+      <div id="statSessions" class="stat-num">0</div>
+      <div class="stat-label">Sessions</div>
+    </div>
+    <div class="stat">
+      <div id="statTime" class="stat-num">0m</div>
+      <div class="stat-label">Locked In</div>
+    </div>
+    <div class="stat">
+      <div id="statSets" class="stat-num">0</div>
+      <div class="stat-label">Push Sets</div>
+    </div>
+  </div>
+
+  <!-- Divider -->
+  <div class="divider"></div>
+
+  <!-- Buttons -->
+  <div class="btn-row">
+    <button id="stopBtn" class="btn-stop hidden" onclick="stopTimer()">■ Stop</button>
+    <button id="startBtn" class="btn-start" onclick="handleStart()">🔥 START LOCKING IN</button>
+  </div>
+
+  <!-- Notification blocked indicator -->
+  <div id="notifBlocked" class="notif-blocked hidden">🔕 Notifications blocked — sound only</div>
+</div>
   <script>
     // ─── CONFIG ───────────────────────────────────────────────
     const LOCKIN_MS  = 30 * 60 * 1000;  // 30 minutes
@@ -134,6 +472,67 @@
       if (h > 0) return `${h}h ${m}m`;
       return `${m}m`;
     }
+
+    // ─── RENDER ───────────────────────────────────────────────
+    const RING_CIRCUMFERENCE = 2 * Math.PI * 95; // r=95 → ~597
+
+    function render() {
+      const app        = document.getElementById('app');
+      const modeLabel  = document.getElementById('modeLabel');
+      const sessionInfo = document.getElementById('sessionInfo');
+      const countdown  = document.getElementById('countdown');
+      const ringLabel  = document.getElementById('ringLabel');
+      const ringProgress = document.getElementById('ringProgress');
+      const breakTasks = document.getElementById('breakTasks');
+      const startBtn   = document.getElementById('startBtn');
+      const stopBtn    = document.getElementById('stopBtn');
+      const statSessions = document.getElementById('statSessions');
+      const statTime   = document.getElementById('statTime');
+      const statSets   = document.getElementById('statSets');
+
+      const isBreak = state.phase === 'break';
+      const isIdle  = state.phase === 'idle';
+
+      // Phase class
+      app.classList.toggle('break', isBreak);
+
+      // Mode label
+      modeLabel.textContent = isBreak ? '💪 Break Time' : '🔥 Lock In';
+
+      // Session info
+      sessionInfo.textContent = `SESSION ${stats.sessions} · TODAY`;
+
+      // Countdown
+      countdown.textContent = fmtTime(state.remaining);
+
+      // Ring label
+      ringLabel.textContent = isIdle ? 'READY' : (isBreak ? 'BREAK LEFT' : 'REMAINING');
+
+      // Ring progress (dashoffset = circumference * (1 - progress))
+      const total = isBreak ? BREAK_MS : LOCKIN_MS;
+      const progress = isIdle ? 1 : Math.max(0, state.remaining / total);
+      const offset = RING_CIRCUMFERENCE * (1 - progress);
+      ringProgress.style.strokeDasharray = RING_CIRCUMFERENCE;
+      ringProgress.style.strokeDashoffset = offset;
+
+      // Break tasks visibility
+      breakTasks.classList.toggle('hidden', !isBreak);
+
+      // Buttons
+      startBtn.classList.toggle('hidden', !isIdle);
+      stopBtn.classList.toggle('hidden', isIdle);
+
+      // Stats
+      statSessions.textContent = stats.sessions;
+      statTime.textContent = fmtDuration(stats.totalMs);
+      statSets.textContent = stats.pushupSets;
+    }
+
+    // Initial render on load
+    document.addEventListener('DOMContentLoaded', () => {
+      render();
+      if (typeof showNextQuote === 'function') showNextQuote();
+    });
 
     // Service worker
     if ('serviceWorker' in navigator) {
