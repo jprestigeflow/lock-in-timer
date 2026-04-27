@@ -39,11 +39,15 @@
 
     function loadStats() {
       const key = getTodayKey();
-      const raw = localStorage.getItem('lockin_stats');
-      if (!raw) return { date: key, sessions: 0, totalMs: 0, pushupSets: 0 };
-      const data = JSON.parse(raw);
-      if (data.date !== key) return { date: key, sessions: 0, totalMs: 0, pushupSets: 0 };
-      return data;
+      try {
+        const raw = localStorage.getItem('lockin_stats');
+        if (!raw) return { date: key, sessions: 0, totalMs: 0, pushupSets: 0 };
+        const data = JSON.parse(raw);
+        if (data.date !== key) return { date: key, sessions: 0, totalMs: 0, pushupSets: 0 };
+        return data;
+      } catch(e) {
+        return { date: key, sessions: 0, totalMs: 0, pushupSets: 0 };
+      }
     }
 
     function saveStats(stats) {
@@ -70,7 +74,6 @@
 
       if (state.remaining <= 0) {
         state.remaining = 0;
-        render();
         onPhaseEnd();
         return;
       }
@@ -98,6 +101,7 @@
     }
 
     function stopTimer() {
+      if (state.phase === 'idle') return;
       clearInterval(state.tickInterval);
       clearInterval(state.quoteInterval);
       if (state.phase === 'lockin' && state.startedAt) {
