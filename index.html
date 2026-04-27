@@ -17,7 +17,121 @@
 <body>
   <div id="app">Loading...</div>
   <script>
-    // JS goes here
+    // ─── CONFIG ───────────────────────────────────────────────
+    const LOCKIN_MS  = 30 * 60 * 1000;  // 30 minutes
+    const BREAK_MS   = 10 * 60 * 1000;  // 10 minutes
+    const QUOTE_INTERVAL_MS = 10 * 60 * 1000; // rotate quote every 10 min
+
+    // ─── STATE ────────────────────────────────────────────────
+    const state = {
+      phase: 'idle',        // 'idle' | 'lockin' | 'break'
+      remaining: LOCKIN_MS,
+      startedAt: null,
+      tickInterval: null,
+      quoteInterval: null,
+      notifPermission: 'default',
+    };
+
+    // ─── STATS (localStorage) ─────────────────────────────────
+    function getTodayKey() {
+      return new Date().toDateString();
+    }
+
+    function loadStats() {
+      const key = getTodayKey();
+      const raw = localStorage.getItem('lockin_stats');
+      if (!raw) return { date: key, sessions: 0, totalMs: 0, pushupSets: 0 };
+      const data = JSON.parse(raw);
+      if (data.date !== key) return { date: key, sessions: 0, totalMs: 0, pushupSets: 0 };
+      return data;
+    }
+
+    function saveStats(stats) {
+      try {
+        localStorage.setItem('lockin_stats', JSON.stringify(stats));
+      } catch(e) { /* in-memory only if storage fails */ }
+    }
+
+    let stats = loadStats();
+
+    // ─── TIMER ENGINE ─────────────────────────────────────────
+    function startPhase(phase) {
+      state.phase = phase;
+      state.remaining = phase === 'lockin' ? LOCKIN_MS : BREAK_MS;
+      state.startedAt = Date.now();
+      clearInterval(state.tickInterval);
+      state.tickInterval = setInterval(tick, 500);
+      render();
+    }
+
+    function tick() {
+      const elapsed = Date.now() - state.startedAt;
+      state.remaining = (state.phase === 'lockin' ? LOCKIN_MS : BREAK_MS) - elapsed;
+
+      if (state.remaining <= 0) {
+        state.remaining = 0;
+        render();
+        onPhaseEnd();
+        return;
+      }
+      render();
+    }
+
+    function onPhaseEnd() {
+      clearInterval(state.tickInterval);
+
+      if (state.phase === 'lockin') {
+        // Lock in complete → go to break
+        stats.sessions++;
+        stats.totalMs += LOCKIN_MS;
+        stats.pushupSets++;
+        saveStats(stats);
+        playChime();
+        sendNotification('Break time 💪', '10 push ups. Step away. Reset.');
+        startPhase('break');
+      } else {
+        // Break complete → back to lock in
+        playChime();
+        sendNotification('🔥 Lock In', 'Straight calls. No excuses.');
+        startPhase('lockin');
+      }
+    }
+
+    function stopTimer() {
+      clearInterval(state.tickInterval);
+      clearInterval(state.quoteInterval);
+      if (state.phase === 'lockin' && state.startedAt) {
+        stats.totalMs += Date.now() - state.startedAt;
+        saveStats(stats);
+      }
+      state.phase = 'idle';
+      state.remaining = LOCKIN_MS;
+      render();
+    }
+
+    function handleStart() {
+      requestNotifPermission().then(() => {
+        startQuoteRotation();
+        startPhase('lockin');
+      });
+    }
+
+    // ─── FORMAT ───────────────────────────────────────────────
+    function fmtTime(ms) {
+      const total = Math.max(0, Math.ceil(ms / 1000));
+      const m = Math.floor(total / 60).toString().padStart(2, '0');
+      const s = (total % 60).toString().padStart(2, '0');
+      return `${m}:${s}`;
+    }
+
+    function fmtDuration(ms) {
+      const h = Math.floor(ms / 3600000);
+      const m = Math.floor((ms % 3600000) / 60000);
+      if (h > 0) return `${h}h ${m}m`;
+      return `${m}m`;
+    }
+
+    // Service worker
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js');
     }
